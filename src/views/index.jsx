@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
+import { render } from 'react-dom';
 import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 const Page = () => {
   useEffect(() => {
@@ -14,12 +16,37 @@ const Page = () => {
 
     const scene = new THREE.Scene();
 
+    const axesHelper = new THREE.AxesHelper();
+
+    // 辅助坐标系
+    scene.add(axesHelper);
+    // 创建辅助平面
+    const gridHelper = new THREE.GridHelper();
+    scene.add(gridHelper);
+
+    // 添加全局光照
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+
+    scene.add(ambientLight, directionalLight);
+
     // 创建立方体几何体
     const geometry = new THREE.BoxGeometry(1, 1, 1);
+    console.log(geometry);
+
+    const faces = [];
+
+    for (let i = 0; i < geometry.groups.length; i++) {
+      const material = new THREE.MeshBasicMaterial({
+        color: 0xffffff * Math.random(),
+      });
+      faces.push(material);
+    }
+
     // 创建立方体的基础材质
-    const material = new THREE.MeshBasicMaterial({ color: 0x1890ff });
+    const material = new THREE.MeshLambertMaterial({ color: 0x1890ff });
     // 创建3D物体对象
-    const mesh = new THREE.Mesh(geometry, material);
+    const mesh = new THREE.Mesh(geometry, faces);
     scene.add(mesh);
 
     // 创建相机对象
@@ -34,11 +61,35 @@ const Page = () => {
     // 创建渲染器
     const renderer = new THREE.WebGLRenderer({
       canvas,
+      antialias: true,
     });
+
+    // 设置渲染器屏幕像素比
+    renderer.setPixelRatio(window.devicePixelRatio || 1);
+
     //设置渲染器大小
     renderer.setSize(width, height);
     // 执行渲染
     renderer.render(scene, camera);
+
+    // 创建轨道控制器
+    const orbitControls = new OrbitControls(camera, canvas);
+    orbitControls.enableDamping = true;
+
+    const clock = new THREE.Clock();
+    const tick = () => {
+      const elapsedTime = clock.getElapsedTime();
+      console.log(elapsedTime);
+
+      //   mesh.rotation.y += elapsedTime / 1000;
+      //   mesh.position.x += elapsedTime / 1000;
+      mesh.scale.x += elapsedTime / 1000;
+
+      orbitControls.update();
+      renderer.render(scene, camera);
+      window.requestAnimationFrame(tick);
+    };
+    tick();
   }, []);
 
   return (
