@@ -9,6 +9,7 @@ import { Wireframe } from 'three/examples/jsm/lines/Wireframe.js';
 const Page = () => {
   useEffect(() => {
     const $ = {
+      cameraIndex: 0,
       createScene() {
         console.log(THREE);
         const canvas = document.getElementById('c');
@@ -39,64 +40,62 @@ const Page = () => {
         const material = new THREE.MeshLambertMaterial({ color: 0x1890ff });
         // 创建3D物体对象
         const mesh = new THREE.Mesh(geometry, material);
+
         this.scene.add(mesh);
         this.mesh = mesh;
       },
       createCamera() {
-        const size = 4;
-        // 创建相机对象
-        const orthoCamera = new THREE.OrthographicCamera(
-          -size,
-          size,
-          size / 2,
-          -size / 2,
-          0.1,
+        const pCamera = new THREE.PerspectiveCamera(
+          75,
+          this.width / this.height,
+          1,
           10
         );
-        // 设置相机位置
-        orthoCamera.position.set(2, 2, 3); // x,y,z
-        // 单位是向量
-        // 相机朝向
-        orthoCamera.lookAt(this.scene.position);
-        this.scene.add(orthoCamera);
-        this.orthoCamera = orthoCamera;
-        console.log(this.orthoCamera);
-        this.camera = orthoCamera;
+
+        pCamera.position.set(0, 0, 3); // x,y,z
+        pCamera.lookAt(this.scene.position);
+        this.scene.add(pCamera);
+        this.camera = pCamera;
+        this.pCamera = pCamera;
 
         // 用第二个相机观察
         const watcherCamera = new THREE.PerspectiveCamera(
           75,
           this.width / this.height,
           0.1,
-          100
+          1000
         );
 
         watcherCamera.position.set(2, 2, 6); // x,y,z
         watcherCamera.lookAt(this.scene.position);
         this.watcherCamera = watcherCamera;
         this.scene.add(watcherCamera);
-        this.camera = watcherCamera; // 覆盖camera
+        // this.camera = watcherCamera; // 覆盖camera
       },
       datGui() {
-        const gui = new dat.GUI();
         const _this = this;
+        const gui = new dat.GUI();
         const params = {
+          color: 0x1890ff,
           Wireframe: false,
           switchCamera: () => {
-            console.log(0);
-            console.log(this.camera);
-            if (_this.camera.type === 'OrthographicCamera') {
+            if (_this.cameraIndex === 0) {
               _this.camera = _this.watcherCamera;
-              _this.orbitControls.enableDamping = true;
+              _this.cameraIndex = 1;
             } else {
-              _this.camera = _this.orthoCamera;
-              _this.orbitControls.enableDamping = false;
+              _this.camera = _this.pCamera;
+              _this.cameraIndex = 0;
             }
           },
         };
 
         console.log(this.camera);
-        gui.add(this.camera.position, 'x', 0.1, 10, 0.1).name('positionX');
+        gui
+          .add(this.camera.position, 'x')
+          .min(-10)
+          .max(10)
+          .step(0.1)
+          .name('positionX');
         gui.add(this.camera.rotation, 'x', 0.1, 10, 0.1).name('rotationX');
         gui.add(this.camera, 'near', 0.01, 10, 0.01).onChange((val) => {
           console.log(val);
@@ -116,11 +115,21 @@ const Page = () => {
         gui.add(params, 'Wireframe').onChange((val) => {
           this.mesh.material.wireframe = val;
         });
+
+        gui.add(this.camera, 'fov', 40, 150, 1).onChange((val) => {
+          this.camera.fov = val;
+          this.camera.updateProjectionMatrix();
+        });
+
         gui.add(params, 'switchCamera');
+        gui.addColor(params, 'color').onChange((val) => {
+          console.log(val);
+          _this.mesh.material.color.set(val);
+        });
       },
       helpers() {
         const axesHelper = new THREE.AxesHelper();
-        const cameraHelper = new THREE.CameraHelper(this.orthoCamera);
+        const cameraHelper = new THREE.CameraHelper(this.pCamera);
 
         this.scene.add(axesHelper, cameraHelper);
         // 创建辅助平面
@@ -151,7 +160,7 @@ const Page = () => {
         this.orbitControls = orbitControls;
       },
       tick() {
-        this.mesh.rotation.y += 0.01;
+        // this.mesh.rotation.y += 0.01;
         this.orbitControls.update();
         this.cameraHelper.update();
         this.renderer.render(this.scene, this.camera);
