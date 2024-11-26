@@ -41,6 +41,11 @@ const Page = () => {
         // 创建3D物体对象
         const mesh = new THREE.Mesh(geometry, material);
 
+        // 调用后geometry属性上才有boundingBox属性
+        mesh.geometry.computeBoundingBox();
+
+        console.log(mesh);
+
         this.scene.add(mesh);
         this.mesh = mesh;
       },
@@ -70,7 +75,19 @@ const Page = () => {
         watcherCamera.lookAt(this.scene.position);
         this.watcherCamera = watcherCamera;
         this.scene.add(watcherCamera);
-        // this.camera = watcherCamera; // 覆盖camera
+        this.camera = watcherCamera; // 覆盖camera
+
+        // 通过camera计算出视锥
+        const frustum = new THREE.Frustum();
+        this.camera.updateProjectionMatrix(); // 更新以保证拿到正确的结果
+        frustum.setFromProjectionMatrix(
+          new THREE.Matrix4().multiplyMatrices(
+            this.pCamera.projectionMatrix,
+            this.pCamera.matrixWorldInverse
+          )
+        );
+        const result = frustum.intersectsBox(this.mesh.geometry.boundingBox);
+        console.log(result);
       },
       datGui() {
         const _this = this;
@@ -97,10 +114,22 @@ const Page = () => {
           .step(0.1)
           .name('positionX');
         gui.add(this.camera.rotation, 'x', 0.1, 10, 0.1).name('rotationX');
-        gui.add(this.camera, 'near', 0.01, 10, 0.01).onChange((val) => {
+        gui.add(this.pCamera, 'near', 0.01, 10, 0.01).onChange((val) => {
           console.log(val);
           this.camera.near = val;
           this.camera.updateProjectionMatrix();
+
+          // 通过camera计算出视锥
+          const frustum = new THREE.Frustum();
+          this.pCamera.updateProjectionMatrix(); // 更新以保证拿到正确的结果
+          frustum.setFromProjectionMatrix(
+            new THREE.Matrix4().multiplyMatrices(
+              this.pCamera.projectionMatrix,
+              this.pCamera.matrixWorldInverse
+            )
+          );
+          const result = frustum.intersectsBox(this.mesh.geometry.boundingBox);
+          console.log(result);
         });
         gui.add(this.camera, 'far', 1, 100, 1).onChange((val) => {
           console.log(val);
