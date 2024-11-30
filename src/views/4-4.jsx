@@ -98,35 +98,50 @@ const Page = () => {
         });
 
         const textureLoader = new THREE.TextureLoader(manager);
-        textureLoader;
 
-        this.texture = textureLoader.load(
-          'src/assets/textures/Wood_Ceiling_Coffers_003/Wood_Ceiling_Coffers_003_basecolor.jpg',
-          function (texture) {
-            // this.mesh.material.map = texture;
-          },
-          null,
-          (error) => {
-            console.log(error);
-          }
-        );
+        this.textureLoader = textureLoader;
       },
       createObjects() {
+        const colorTexture = this.textureLoader.load(
+          `/src/assets/textures/Wood_Ceiling_Coffers_003/Wood_Ceiling_Coffers_003_basecolor.jpg`
+        );
+        const aoTexture = this.textureLoader.load(
+          `/src/assets/textures/Wood_Ceiling_Coffers_003/Wood_Ceiling_Coffers_003_ambientOcclusion.jpg`
+        );
+        const bumpTexture = this.textureLoader.load(
+          `/src/assets/textures/Wood_Ceiling_Coffers_003/Wood_Ceiling_Coffers_003_height.png`
+        );
+        const normalTexture = this.textureLoader.load(
+          `/src/assets/textures/Wood_Ceiling_Coffers_003/Wood_Ceiling_Coffers_003_normal.png`
+        );
+        const roughnessTexture = this.textureLoader.load(
+          `/src/assets/textures/Wood_Ceiling_Coffers_003/Wood_Ceiling_Coffers_003_roughness.jpg`
+        ); // 光滑度贴图
+
         const geometry = new THREE.CylinderGeometry(2, 2, 2);
-        const material = new THREE.MeshLambertMaterial({
-          map: this.texture,
-          transparent: true,
-          opacity: 0.5,
-          wireframe: true,
+        const material = new THREE.MeshStandardMaterial({
+          map: colorTexture,
+          aoMap: aoTexture,
+          bumpMap: bumpTexture,
+          displacementMap: bumpTexture,
+          normalMap: normalTexture,
+          roughnessMap: roughnessTexture,
         });
         const mesh = new THREE.Mesh(geometry, material);
         this.mesh = mesh;
         mesh.position.x = -1.5;
 
-        const boxGeometry = new THREE.BoxGeometry(2, 2, 2);
-        const boxMaterial = new THREE.MeshBasicMaterial({
-          map: this.texture,
+        const boxGeometry = new THREE.BoxGeometry(2, 2, 2, 32, 32, 32);
+        const boxMaterial = new THREE.MeshStandardMaterial({
+          map: colorTexture,
+          aoMap: aoTexture,
+          bumpMap: bumpTexture,
+          displacementMap: bumpTexture,
+          normalMap: normalTexture,
+          roughnessMap: roughnessTexture,
+          //   wireframe: true,
         });
+
         const box = new THREE.Mesh(boxGeometry, boxMaterial);
 
         box.position.x = 2;

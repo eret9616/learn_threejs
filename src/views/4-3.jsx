@@ -99,6 +99,7 @@ const Page = () => {
 
         const textureLoader = new THREE.TextureLoader(manager);
         textureLoader;
+        this.textureLoader = textureLoader;
 
         this.texture = textureLoader.load(
           'src/assets/textures/Wood_Ceiling_Coffers_003/Wood_Ceiling_Coffers_003_basecolor.jpg',
@@ -127,7 +128,18 @@ const Page = () => {
         const boxMaterial = new THREE.MeshBasicMaterial({
           map: this.texture,
         });
-        const box = new THREE.Mesh(boxGeometry, boxMaterial);
+        const materials = [];
+
+        for (let i = 0; i < boxGeometry.groups.length; i++) {
+          this.textureLoader.load(
+            `src/assets/textures/fullscreen/0${i + 1}.jpg`,
+            function (texture) {
+              materials[i] = new THREE.MeshBasicMaterial({ map: texture });
+            }
+          );
+        }
+
+        const box = new THREE.Mesh(boxGeometry, materials);
 
         box.position.x = 2;
         this.scene.add(mesh, box);
