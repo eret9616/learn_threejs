@@ -174,12 +174,13 @@ const Page = () => {
         const { children } = this.group;
 
         const delta = 4;
+        //         2 * PI * r  / 360 *delta 是delta增量的弧度，这个速度(speed)是每个tick移动的距离
         const speed = ((2 * Math.PI * 0.2) / 360) * delta;
 
         for (const i in children) {
           const mesh = children[i];
           if (mesh.name === 'wheel') {
-            mesh.rotation.y += THREE.MathUtils.radToDeg(delta);
+            mesh.rotation.y += THREE.MathUtils.radToDeg(delta); // 旋转的也应该是每个tick移动的距离
           }
         }
         this.group.position.x -= speed;
