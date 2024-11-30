@@ -7,6 +7,7 @@ import { DragControls } from 'three/examples/jsm/controls/DragControls.js';
 import * as dat from 'dat.gui';
 import Stats from 'three/examples/jsm/libs/stats.module.js';
 import { Wireframe } from 'three/examples/jsm/lines/Wireframe.js';
+import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
 import { HeartCurve } from 'three/examples/jsm/curves/CurveExtras.js';
 import { func } from 'three/examples/jsm/nodes/Nodes.js';
 
@@ -34,7 +35,7 @@ const Page = () => {
         this.scene.add(ambientLight, directionalLight);
       },
       loadTextures() {
-        const textureLoader = new THREE.TextureLoader();
+        // 方法1
         // const img = new Image();
         // const texture = new THREE.Texture(img);
         // img.onload = function () {
@@ -43,6 +44,62 @@ const Page = () => {
         // };
         // img.src =
         //   'src/assets/textures/Wood_Ceiling_Coffers_003/Wood_Ceiling_Coffers_003_basecolor.jpg';
+
+        // 方法2
+        // const textureLoader = new THREE.TextureLoader();
+        // this.texture = textureLoader.load(
+        //   'src/assets/textures/Wood_Ceiling_Coffers_003/Wood_Ceiling_Coffers_003_basecolor.jpg',
+        //   function (texture) {
+        //     // this.mesh.material.map = texture;
+        //   },
+        //   null,
+        //   (error) => {
+        //     console.log(error);
+        //   }
+        // );
+
+        // 方法3
+        const manager = new THREE.LoadingManager();
+        manager.onStart = function (url, itemsLoaded, itemsTotal) {
+          console.log(
+            'Started loading file: ' +
+              url +
+              '.\nLoaded ' +
+              itemsLoaded +
+              ' of ' +
+              itemsTotal +
+              ' files.'
+          );
+        };
+
+        manager.onLoad = function () {
+          console.log('Loading complete!');
+        };
+
+        manager.onProgress = function (url, itemsLoaded, itemsTotal) {
+          console.log(
+            'Loading file: ' +
+              url +
+              '.\nLoaded ' +
+              itemsLoaded +
+              ' of ' +
+              itemsTotal +
+              ' files.'
+          );
+        };
+
+        manager.onError = function (url) {
+          console.log('There was an error loading ' + url);
+        };
+
+        const loader = new OBJLoader(manager);
+        loader.load('file.obj', function (object) {
+          //
+        });
+
+        const textureLoader = new THREE.TextureLoader(manager);
+        textureLoader;
+
         this.texture = textureLoader.load(
           'src/assets/textures/Wood_Ceiling_Coffers_003/Wood_Ceiling_Coffers_003_basecolor.jpg',
           function (texture) {
