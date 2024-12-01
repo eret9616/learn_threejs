@@ -7,6 +7,7 @@ import { DragControls } from 'three/examples/jsm/controls/DragControls.js';
 import * as dat from 'dat.gui';
 import Stats from 'three/examples/jsm/libs/stats.module.js';
 import { Wireframe } from 'three/examples/jsm/lines/Wireframe.js';
+import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader';
 import { HeartCurve } from 'three/examples/jsm/curves/CurveExtras.js';
 
 const Page = () => {
@@ -30,36 +31,156 @@ const Page = () => {
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
         const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
 
-        this.scene.add(ambientLight, directionalLight);
+        // this.scene.add(ambientLight, directionalLight);
         this.directionalLight = directionalLight;
       },
-      createObjects() {
-        const material = new THREE.MeshLambertMaterial({
-          color: 0x1890ff,
-          transparent: true,
-          side: THREE.DoubleSide,
+      loadTextures() {
+        // 方法1
+        // const img = new Image();
+        // const texture = new THREE.Texture(img);
+        // img.onload = function () {
+        //   console.log(texture);
+        //   texture.needsUpdate = true;
+        // };
+        // img.src =
+        //   'src/assets/textures/Wood_Ceiling_Coffers_003/Wood_Ceiling_Coffers_003_basecolor.jpg';
+
+        // 方法2
+        // const textureLoader = new THREE.TextureLoader();
+        // this.texture = textureLoader.load(
+        //   'src/assets/textures/Wood_Ceiling_Coffers_003/Wood_Ceiling_Coffers_003_basecolor.jpg',
+        //   function (texture) {
+        //     // this.mesh.material.map = texture;
+        //   },
+        //   null,
+        //   (error) => {
+        //     console.log(error);
+        //   }
+        // );
+
+        // 方法3
+        const manager = new THREE.LoadingManager();
+        manager.onStart = function (url, itemsLoaded, itemsTotal) {
+          console.log(
+            'Started loading file: ' +
+              url +
+              '.\nLoaded ' +
+              itemsLoaded +
+              ' of ' +
+              itemsTotal +
+              ' files.'
+          );
+        };
+
+        manager.onLoad = function () {
+          console.log('Loading complete!');
+        };
+
+        manager.onProgress = function (url, itemsLoaded, itemsTotal) {
+          console.log(
+            'Loading file: ' +
+              url +
+              '.\nLoaded ' +
+              itemsLoaded +
+              ' of ' +
+              itemsTotal +
+              ' files.'
+          );
+        };
+
+        manager.onError = function (url) {
+          console.log('There was an error loading ' + url);
+        };
+
+        const loader = new OBJLoader(manager);
+        loader.load('file.obj', function (object) {
+          //
         });
 
-        const plane = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), material); // 平面
-        const sphere = new THREE.Mesh(
-          new THREE.SphereGeometry(0.5, 16, 16),
+        const textureLoader = new THREE.TextureLoader(manager);
+
+        let texture = textureLoader.load(
+          '/src/assets/textures/Wood_Ceiling_Coffers_003/Wood_Ceiling_Coffers_003_basecolor.jpg'
+        );
+
+        const aoTexture = textureLoader.load(
+          'src/assets/textures/Wood_Ceiling_Coffers_003/Wood_Ceiling_Coffers_003_ambientOcclusion.jpg'
+        );
+
+        const bumpTexture = textureLoader.load(
+          'src/assets/textures/Warning_Sign_HighVoltage_001/Warning_Sign_HighVoltage_001_height.png'
+        );
+
+        const normalTexture = textureLoader.load(
+          'src/assets/textures/Wood_Ceiling_Coffers_003/Wood_Ceiling_Coffers_003_normal.jpg'
+        );
+
+        const roughnessTexture = textureLoader.load(
+          'src/assets/textures/Warning_Sign_HighVoltage_001/Warning_Sign_HighVoltage_001_roughness.jpg'
+        );
+
+        const metalTexture = textureLoader.load(
+          'src/assets/textures/Warning_Sign_HighVoltage_001/Warning_Sign_HighVoltage_001_metallic.jpg'
+        );
+
+        const specularTexture = textureLoader.load(
+          '/src/assets/textures/earth/earth_specular_2048.jpg'
+        );
+
+        const matcapTexture = textureLoader.load(
+          'src/assets/textures/matcaps/BA472D_CA6E67-256px.png'
+        );
+
+        this.texture = texture;
+        this.aoTexture = aoTexture;
+        this.bumpTexture = bumpTexture;
+        this.normalTexture = normalTexture;
+        this.roughnessTexture = roughnessTexture;
+        this.metalTexture = metalTexture;
+        this.specularTexture = specularTexture;
+        this.matcapTexture = matcapTexture;
+
+        // 环境贴图加载器
+        const cubeTextureLoader = new THREE.CubeTextureLoader();
+        const envTexture = cubeTextureLoader.load([
+          '/src/assets/textures/fullscreen/1.left.jpg',
+          '/src/assets/textures/fullscreen/1.right.jpg',
+          '/src/assets/textures/fullscreen/1.top.jpg',
+          '/src/assets/textures/fullscreen/1.bottom.jpg',
+          '/src/assets/textures/fullscreen/1.front.jpg',
+          '/src/assets/textures/fullscreen/1.back.jpg',
+        ]);
+
+        this.envTexture = envTexture;
+      },
+      createObjects() {
+        const material = new THREE.MeshBasicMaterial({
+          //   color: 0x1890ff,
+          transparent: true,
+          side: THREE.DoubleSide,
+          //   matcap: this.matcapTexture,
+          map: this.texture,
+        });
+
+        const box = new THREE.Mesh(
+          new THREE.SphereGeometry(1, 64, 64),
           material
-        ); // 球体
-        const box = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), material); // 立方体
-        const torus = new THREE.Mesh(
-          new THREE.TorusGeometry(0.4, 0.2, 16, 32),
-          material
-        ); // 圆环
+        ); // 立方体
+        const meshMaterial = new THREE.MeshMatcapMaterial({
+          //   color: 0x1890ff,
+          matcap: this.matcapTexture,
+        });
+        const mesh = new THREE.Mesh(
+          new THREE.SphereGeometry(1, 64, 64),
+          meshMaterial
+        ); // 立方体
 
-        console.log(material);
+        box.position.x = -1.2;
+        mesh.position.x = 1.2;
 
-        plane.position.z = -1;
-        box.position.z = 1;
-        sphere.position.x = -1.5;
-        torus.position.x = 1.5;
-
+        this.meshMaterial = meshMaterial;
         this.material = material;
-        this.scene.add(plane, sphere, box, torus);
+        this.scene.add(mesh, box);
       },
       createCamera() {
         const pCamera = new THREE.PerspectiveCamera(
@@ -81,34 +202,16 @@ const Page = () => {
         }
         const gui = new dat.GUI();
         window.gui = gui;
-        gui.add(_this.orbitControls, 'enabled');
-        gui.add(_this.orbitControls, 'dampingFactor', 0.01, 0.2, 0.01); // 阻尼系数
-        gui.add(_this.orbitControls, 'enablePan'); // 旋转速度
-        // panspeed
-        gui.add(_this.orbitControls, 'panSpeed', 1, 10, 1);
-        gui.add(_this.orbitControls, 'autoRotate');
-        gui.add(_this.orbitControls, 'autoRotateSpeed', 1, 10, 1);
-        gui.add(_this.orbitControls, 'enableZoom');
-        gui.add(_this.orbitControls, 'zoomSpeed', 1, 10, 1);
-        //
-
-        gui.addColor({ color: 0x1890ff }, 'color').onChange((color) => {
-          _this.material.color.set(color);
+        const params = {
+          x: _this.meshMaterial.normalScale.x,
+          y: _this.meshMaterial.normalScale.y,
+        };
+        gui.add(params, 'x', 0, 2, 0.1).onChange(function (val) {
+          _this.meshMaterial.normalScale = new THREE.Vector2(val, params.y);
         });
-        gui.add(this.material, 'opacity', 0, 1, 0.1);
-        gui
-          .add(this.material, 'side', ['FrontSide', 'BackSide', 'DoubleSide'])
-          .onChange((side) => {
-            this.material.side = THREE[side];
-          });
-        gui.add(this.material, 'wireframe');
-
-        const lightFolder = gui.addFolder('光照');
-        lightFolder.add(this.directionalLight, 'intensity', 0, 1, 0.1);
-        lightFolder.add(this.directionalLight.position, 'x', -20, 20, 0.1);
-        lightFolder.add(this.directionalLight.position, 'y', -20, 20, 0.1);
-        lightFolder.add(this.directionalLight.position, 'z', -20, 20, 0.1);
-        lightFolder.open();
+        gui.add(params, 'y', 0, 2, 0.1).onChange(function (val) {
+          _this.meshMaterial.normalScale = new THREE.Vector2(params.x, val);
+        });
       },
       helpers() {
         const axesHelper = new THREE.AxesHelper();
@@ -182,6 +285,7 @@ const Page = () => {
       init() {
         this.createScene();
         this.createLights();
+        this.loadTextures();
         this.createObjects();
         this.createCamera();
         this.helpers();
