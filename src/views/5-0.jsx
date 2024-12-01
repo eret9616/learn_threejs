@@ -27,13 +27,14 @@ const Page = () => {
       },
       createLights() {
         // 添加全局光照
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
         const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
 
         this.scene.add(ambientLight, directionalLight);
+        this.directionalLight = directionalLight;
       },
       createObjects() {
-        const material = new THREE.MeshBasicMaterial({
+        const material = new THREE.MeshLambertMaterial({
           color: 0x1890ff,
           transparent: true,
           side: THREE.DoubleSide,
@@ -101,6 +102,13 @@ const Page = () => {
             this.material.side = THREE[side];
           });
         gui.add(this.material, 'wireframe');
+
+        const lightFolder = gui.addFolder('光照');
+        lightFolder.add(this.directionalLight, 'intensity', 0, 1, 0.1);
+        lightFolder.add(this.directionalLight.position, 'x', -20, 20, 0.1);
+        lightFolder.add(this.directionalLight.position, 'y', -20, 20, 0.1);
+        lightFolder.add(this.directionalLight.position, 'z', -20, 20, 0.1);
+        lightFolder.open();
       },
       helpers() {
         const axesHelper = new THREE.AxesHelper();
