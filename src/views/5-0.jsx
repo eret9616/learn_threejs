@@ -154,33 +154,19 @@ const Page = () => {
         this.envTexture = envTexture;
       },
       createObjects() {
-        const material = new THREE.MeshBasicMaterial({
-          //   color: 0x1890ff,
-          transparent: true,
-          side: THREE.DoubleSide,
-          //   matcap: this.matcapTexture,
-          map: this.texture,
-        });
+        const geometry = new THREE.SphereGeometry(0.5, 64, 64);
+        const material = new THREE.MeshDepthMaterial();
+        const mesh1 = new THREE.Mesh(geometry, material);
+        const mesh2 = new THREE.Mesh(geometry, material);
+        const mesh3 = new THREE.Mesh(geometry, material);
+        const mesh4 = new THREE.Mesh(geometry, material);
+        mesh1.position.z = 0;
+        mesh2.position.z = 1;
+        mesh3.position.z = 2;
+        mesh4.position.z = 3;
 
-        const box = new THREE.Mesh(
-          new THREE.SphereGeometry(1, 64, 64),
-          material
-        ); // 立方体
-        const meshMaterial = new THREE.MeshMatcapMaterial({
-          //   color: 0x1890ff,
-          matcap: this.matcapTexture,
-        });
-        const mesh = new THREE.Mesh(
-          new THREE.SphereGeometry(1, 64, 64),
-          meshMaterial
-        ); // 立方体
-
-        box.position.x = -1.2;
-        mesh.position.x = 1.2;
-
-        this.meshMaterial = meshMaterial;
-        this.material = material;
-        this.scene.add(mesh, box);
+        this.mesh1 = mesh1;
+        this.scene.add(mesh1, mesh2, mesh3, mesh4);
       },
       createCamera() {
         const pCamera = new THREE.PerspectiveCamera(
@@ -190,9 +176,10 @@ const Page = () => {
           1000
         );
 
-        pCamera.position.set(0, 1, 2); // x,y,z
+        pCamera.position.set(0, 1, 6); // x,y,z
         pCamera.lookAt(this.scene.position);
         this.scene.add(pCamera);
+        this.pCamera = pCamera;
         this.camera = pCamera;
       },
       datGui() {
@@ -202,16 +189,8 @@ const Page = () => {
         }
         const gui = new dat.GUI();
         window.gui = gui;
-        const params = {
-          x: _this.meshMaterial.normalScale.x,
-          y: _this.meshMaterial.normalScale.y,
-        };
-        gui.add(params, 'x', 0, 2, 0.1).onChange(function (val) {
-          _this.meshMaterial.normalScale = new THREE.Vector2(val, params.y);
-        });
-        gui.add(params, 'y', 0, 2, 0.1).onChange(function (val) {
-          _this.meshMaterial.normalScale = new THREE.Vector2(params.x, val);
-        });
+
+        gui.add(_this.camera.position, 'z', 0.1, 10, 0.1).name('cameraZ');
       },
       helpers() {
         const axesHelper = new THREE.AxesHelper();
@@ -244,7 +223,7 @@ const Page = () => {
         console.log(orbitControls);
 
         const dragControls = new DragControls(
-          [this.mesh],
+          [this.mesh1],
           this.camera,
           this.canvas
         );
