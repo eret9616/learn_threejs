@@ -31,7 +31,7 @@ const Page = () => {
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
         const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
 
-        // this.scene.add(ambientLight, directionalLight);
+        this.scene.add(ambientLight, directionalLight);
         this.directionalLight = directionalLight;
       },
       loadTextures() {
@@ -128,7 +128,7 @@ const Page = () => {
         );
 
         const matcapTexture = textureLoader.load(
-          'src/assets/textures/matcaps/BA472D_CA6E67-256px.png'
+          'src/assets/textures/matcaps/6D3B1C_844C31-256px.png'
         );
 
         this.texture = texture;
@@ -154,19 +154,38 @@ const Page = () => {
         this.envTexture = envTexture;
       },
       createObjects() {
-        const geometry = new THREE.SphereGeometry(0.5, 64, 64);
-        const material = new THREE.MeshDepthMaterial();
-        const mesh1 = new THREE.Mesh(geometry, material);
-        const mesh2 = new THREE.Mesh(geometry, material);
-        const mesh3 = new THREE.Mesh(geometry, material);
-        const mesh4 = new THREE.Mesh(geometry, material);
-        mesh1.position.z = 0;
-        mesh2.position.z = 1;
-        mesh3.position.z = 2;
-        mesh4.position.z = 3;
+        const material = new THREE.MeshPhongMaterial({
+          //   color: 0x1890ff,
+          transparent: true,
+          side: THREE.DoubleSide,
+          //   matcap: this.matcapTexture,
+          map: this.texture,
+        });
 
-        this.mesh1 = mesh1;
-        this.scene.add(mesh1, mesh2, mesh3, mesh4);
+        const box = new THREE.Mesh(
+          new THREE.SphereGeometry(1, 64, 64),
+          material
+        ); // 立方体
+        const meshMaterial = new THREE.MeshPhongMaterial({
+          //   color: 0x1890ff,
+          //   matcap: this.matcapTexture,
+          map: this.texture,
+          //   normalMap: this.normalTexture,
+          specular: 0x00ffff,
+        });
+        const mesh = new THREE.Mesh(
+          new THREE.SphereGeometry(1, 64, 64),
+          meshMaterial
+        ); // 立方体
+        this.mesh = mesh;
+        this.box = box;
+
+        box.position.x = -1.2;
+        mesh.position.x = 1.2;
+
+        this.meshMaterial = meshMaterial;
+        this.material = material;
+        this.scene.add(mesh, box);
       },
       createCamera() {
         const pCamera = new THREE.PerspectiveCamera(
@@ -176,10 +195,9 @@ const Page = () => {
           1000
         );
 
-        pCamera.position.set(0, 1, 6); // x,y,z
+        pCamera.position.set(0, 1, 2); // x,y,z
         pCamera.lookAt(this.scene.position);
         this.scene.add(pCamera);
-        this.pCamera = pCamera;
         this.camera = pCamera;
       },
       datGui() {
@@ -189,8 +207,22 @@ const Page = () => {
         }
         const gui = new dat.GUI();
         window.gui = gui;
+        const params = {
+          x: _this.meshMaterial.normalScale.x,
+          y: _this.meshMaterial.normalScale.y,
+        };
+        gui.add(params, 'x', 0, 2, 0.1).onChange(function (val) {
+          _this.meshMaterial.normalScale = new THREE.Vector2(val, params.y);
+        });
+        gui.add(params, 'y', 0, 2, 0.1).onChange(function (val) {
+          _this.meshMaterial.normalScale = new THREE.Vector2(params.x, val);
+        });
 
-        gui.add(_this.camera.position, 'z', 0.1, 10, 0.1).name('cameraZ');
+        gui.add(_this.directionalLight.position, 'x', -10, 10, 0.1);
+        gui.add(_this.directionalLight.position, 'y', -10, 10, 0.1);
+        gui.add(_this.directionalLight.position, 'z', -10, 10, 0.1);
+
+        gui.add(_this.meshMaterial, 'shininess', 0, 10, 0.1);
       },
       helpers() {
         const axesHelper = new THREE.AxesHelper();
@@ -223,7 +255,7 @@ const Page = () => {
         console.log(orbitControls);
 
         const dragControls = new DragControls(
-          [this.mesh1],
+          [this.mesh],
           this.camera,
           this.canvas
         );
