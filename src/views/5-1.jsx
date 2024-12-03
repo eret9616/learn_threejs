@@ -150,36 +150,30 @@ const Page = () => {
         this.envTexture = envTexture;
       },
       createObjects() {
-        const material = new THREE.MeshToonMaterial({
-          transparent: true,
-          side: THREE.DoubleSide,
-          map: this.texture,
-        });
-        const box = new THREE.Mesh(
-          new THREE.SphereGeometry(1, 64, 64),
+        const material = new THREE.MeshNormalMaterial({});
+        const plane = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), material); // 立方体
+        const sphere = new THREE.Mesh(
+          new THREE.SphereGeometry(0.5, 16, 16),
           material
         ); // 立方体
-        const meshMaterial = new THREE.MeshToonMaterial({
-          map: this.texture,
-          gradientMap: this.threeToneTexture,
-          // normalMap:this.normalTexture,
 
-          // specular:0x00ffff,
-        });
-        const mesh = new THREE.Mesh(
-          new THREE.SphereGeometry(1, 64, 64),
-          meshMaterial
-        ); // 立方体
-        console.log(meshMaterial);
+        const box = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), material);
+        const torus = new THREE.Mesh(
+          new THREE.TorusGeometry(0.4, 0.2, 16, 32),
+          material
+        );
 
-        console.log(meshMaterial);
-        box.position.x = -1.2;
-        mesh.position.x = 1.2;
+        plane.position.z = -1;
+        box.position.z = 1;
+        sphere.position.x = -1.5;
+        torus.position.x = 1.5;
 
-        this.mesh = mesh;
-        this.meshMaterial = meshMaterial;
+        this.torus = torus;
         this.material = material;
-        this.scene.add(box, mesh);
+        this.sphere = sphere;
+        this.box = box;
+        this.plane = plane;
+        this.scene.add(plane, sphere, box, torus);
       },
       createCamera() {
         // 创建第二个相机
@@ -195,41 +189,28 @@ const Page = () => {
         this.camera = watcherCamera;
       },
       datGui() {
+        let _this = this;
         const gui = new dat.GUI();
 
         gui.add(this.directionalLight.position, 'x', -10, 10, 0.1);
         gui.add(this.directionalLight.position, 'y', -10, 10, 0.1);
         gui.add(this.directionalLight.position, 'z', -10, 10, 0.1);
+        //
+        const meshFolder = gui.addFolder('物体');
+        meshFolder.add(this.material, 'wireframe');
+        meshFolder.add(this.material, 'flatShading').onChange((val) => {
+          this.material.needsUpdate = true;
+        });
 
-        const params = {
-          gradientType: 'three', // 设置初始值
-        };
-
-        gui
-          .add(params, 'gradientType', ['none', 'three', 'five'])
+        meshFolder
+          .add(_this.sphere.geometry.parameters, 'heightSegments', 1, 64)
+          .step(1)
           .onChange((val) => {
-            // 先克隆当前材质
-            const newMaterial = this.mesh.material.clone();
-
-            switch (val) {
-              case 'none':
-                newMaterial.gradientMap = null;
-                break;
-              case 'three':
-                newMaterial.gradientMap = this.threeToneTexture;
-                break;
-              case 'five':
-                newMaterial.gradientMap = this.fiveToneTexture;
-                break;
-            }
-
-            // 销毁旧材质
-            this.mesh.material.dispose();
-            // 应用新材质
-            this.mesh.material = newMaterial;
-            // 强制更新
-            this.mesh.material.needsUpdate = true;
+            _this.sphere.geometry.dispose();
+            const geometry = new THREE.SphereGeometry(0.5, 16, val);
+            this.sphere.geometry = geometry;
           });
+        meshFolder.open();
       },
       helpers() {
         // 创建辅助坐标系
