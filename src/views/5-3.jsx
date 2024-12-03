@@ -18,6 +18,8 @@ const Page = () => {
 
         // 创建3D场景对象
         const scene = new THREE.Scene();
+
+        scene.background = new THREE.Color(0xffffff);
         this.scene = scene;
       },
       createLights() {
@@ -140,14 +142,18 @@ const Page = () => {
         ); // 球体
         const mesh = new THREE.Mesh(
           new THREE.SphereGeometry(1, 64, 16),
-          new THREE.MeshStandardMaterial({
-            map: this.texture,
+          new THREE.MeshPhysicalMaterial({
+            // map: this.texture,
             envMap: this.envTexture,
             envMapIntensity: 1,
-            metalnessMap: this.metalTexture,
-            metalness: 0.5,
+            // metalnessMap: this.metalTexture,
+            // metalness: 0.5,
             roughnessMap: this.roughnessTexture,
             roughness: 0.1,
+            clearcoat: true, // 具有反光特性
+            transmission: 0.8,
+            ior: 1.0, // 非金属材质的折射率
+            thickness: 1.0, // 曲面下体积的厚度
           })
         ); // 球体
 
@@ -181,6 +187,14 @@ const Page = () => {
         gui.add(_this.mesh.material, 'envMapIntensity', 0, 1, 0.1);
         gui.add(_this.mesh.material, 'metalness', 0, 1, 0.1);
         gui.add(_this.mesh.material, 'roughness', 0, 1, 0.1);
+
+        gui.add(_this.mesh.material, 'envMapIntensity', 0, 1, 0.1);
+        gui.add(_this.mesh.material, 'metalness', 0, 1, 0.1);
+        gui.add(_this.mesh.material, 'roughness', 0, 1, 0.1);
+        gui.add(_this.mesh.material, 'clearcoat');
+        gui.add(_this.mesh.material, 'transmission', 0, 1, 0.1);
+        gui.add(_this.mesh.material, 'ior', 1.0, 2.333, 0.01);
+        gui.add(_this.mesh.material, 'thickness', 0, 1, 0.01);
       },
       helpers() {
         // 创建辅助坐标系
