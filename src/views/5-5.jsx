@@ -21,6 +21,7 @@ const Page = () => {
         const scene = new THREE.Scene();
 
         scene.background = new THREE.Color(0xffffff);
+
         this.scene = scene;
       },
       createLights() {

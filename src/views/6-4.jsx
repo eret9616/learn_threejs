@@ -3,6 +3,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader';
 import * as dat from 'dat.gui';
+import { RectAreaLightUniformsLib } from 'three/examples/jsm/lights/RectAreaLightUniformsLib';
+import { RectAreaLightHelper } from 'three/examples/jsm/helpers/RectAreaLightHelper';
 
 const Page = () => {
   useEffect(() => {
@@ -16,48 +18,26 @@ const Page = () => {
         this.canvas = canvas;
         this.width = width;
         this.height = height;
-
         // 创建3D场景对象
         const scene = new THREE.Scene();
         this.scene = scene;
       },
       createLights() {
         // 添加全局光照
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.95);
-
-        ambientLight.visible = false;
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.75);
         this.ambientLight = ambientLight;
 
-        // 添加方向光
-        const dirLight = new THREE.DirectionalLight(0xffffaa, 0.95);
+        RectAreaLightUniformsLib.init();
+        // 添加面光源
+        const rectLight = new THREE.RectAreaLight(0xffffff, 10, 2, 4);
+        rectLight.position.set(0, 1, 5);
+        const rectHelper = new RectAreaLightHelper(rectLight);
 
-        dirLight.position.set(0, 1, 2);
-        dirLight.castShadow = true;
-        const dirHelper = new THREE.DirectionalLightHelper(dirLight, 3);
+        this.rectLight = rectLight;
 
-        this.dirHelper = dirHelper;
-        this.dirLight = dirLight;
-        this.scene.add(ambientLight, dirLight, dirHelper);
+        this.scene.add(ambientLight, rectLight, rectHelper);
       },
       loadTextures() {
-        // const img = new Image()
-        // const texture = new THREE.Texture(img)
-        // img.src = '/src/assets/textures/Wood_Ceiling_Coffers_003/Wood_Ceiling_Coffers_003_basecolor.jpg'
-        // img.onload = function(){
-        //   texture.needsUpdate = true
-        // }
-
-        // const textLoader = new THREE.TextureLoader()
-        // this.texture = textLoader.setCrossOrigin('anonymous').load('/src/assets/textures/Wood_Ceiling_Coffers_003/Wood_Ceiling_Coffers_003_basecolor.jpg',
-        // // onload 回调
-        //   function(texture){
-        //   },
-        //   null,
-        //   (err)=>{
-        //     console.log(err);
-        //   }
-        // )
-
         const manager = new THREE.LoadingManager();
         manager.onStart = function (url, itemsLoaded, itemsTotal) {
           console.log(
@@ -97,53 +77,69 @@ const Page = () => {
           'src/assets/textures/large_sandstone_blocks/large_sandstone_blocks_diff_2k.jpg'
         );
 
+        const photoTexture = textureLoader.load(
+          'src/assets/textures/frames/A02I7634.png'
+        );
+
+        floorTexture.wrapS = THREE.RepeatWrapping; // 水平重复
+        floorTexture.wrapT = THREE.RepeatWrapping; // 垂直重复
+        floorTexture.repeat.set(100, 100); // 重
+
+        this.photoTexture = photoTexture;
         this.floorTexture = floorTexture;
         this.wallTexture = wallTexture;
       },
       createObjects() {
         const box = new THREE.Mesh(
           new THREE.BoxGeometry(1, 1, 1),
-          new THREE.MeshLambertMaterial({
+          new THREE.MeshStandardMaterial({
             color: 0x1890ff,
           })
         );
-
-        const geometry = new THREE.PlaneGeometry(10000, 10000);
+        this.box = box;
 
         const floor = new THREE.Mesh(
-          geometry,
-          new THREE.MeshLambertMaterial({
-            // color: 0xfafccf,
-            side: THREE.DoubleSide,
+          new THREE.PlaneGeometry(100, 100),
+          new THREE.MeshStandardMaterial({
+            map: this.floorTexture,
+            roughness: 0,
           })
         );
 
         const wall = new THREE.Mesh(
-          geometry,
-          new THREE.MeshLambertMaterial({
-            // color: 0xfafccf,
-            side: THREE.DoubleSide,
+          new THREE.PlaneGeometry(10, 10),
+          new THREE.MeshStandardMaterial({
+            map: this.wallTexture,
           })
         );
 
-        box.castShadow = true;
-        wall.position.z = -2;
-        floor.receiveShadow = true;
+        // 添加相框
+        const frameGeometry = new THREE.PlaneGeometry(4.4, 6.4);
+        const frameMaterial = new THREE.MeshStandardMaterial({
+          color: 0xd08a38,
+        });
+        const frame = new THREE.Mesh(frameGeometry, frameMaterial);
+        const photoGeometry = new THREE.PlaneGeometry(4, 6);
+        const photoMaterial = new THREE.MeshStandardMaterial({
+          map: this.photoTexture,
+          roughness: 0,
+        });
+        const photo = new THREE.Mesh(photoGeometry, photoMaterial);
+        const group = new THREE.Group();
+        group.add(frame, photo);
+        frame.position.z = 0.001;
+        photo.position.z = 0.002;
+        group.position.z = -5;
+        group.position.y = 5;
+
         floor.rotation.x = -Math.PI / 2;
         floor.position.y = -0.8;
         floor.position.z = -2;
 
-        const sky = new THREE.Mesh(
-          geometry,
-          new THREE.MeshLambertMaterial({
-            side: THREE.DoubleSide,
-          })
-        );
-        this.dirLight.target = box;
-        this.box = box;
-        sky.position.y = 20;
-        sky.rotation.x = -Math.PI / 2;
-        this.scene.add(box, floor, sky, wall);
+        wall.position.y = 0.8;
+        wall.position.z = -5;
+
+        this.scene.add(box, floor, wall, group);
       },
       createCamera() {
         // 创建第二个相机
@@ -165,57 +161,38 @@ const Page = () => {
         }
         const gui = new dat.GUI();
         window.gui = gui;
-
-        const ambientFolder = gui.addFolder('环境光');
-
-        ambientFolder
-          .add(_this.ambientLight, 'intensity', 0, 1, 0.1)
-          .name('环境光强度');
-        ambientFolder.add(_this.ambientLight, 'visible').name('环境光可见性');
-        ambientFolder
-          .addColor(
-            {
-              color: 0xffffff,
-            },
-            'color'
-          )
-          .onChange((color) => {
-            _this.ambientLight.color.set(color);
-          });
-        ambientFolder.open();
-
-        const dirLightFolder = gui.addFolder('方向光');
-        dirLightFolder.add(_this.dirLight, 'intensity', 0, 1, 0.1);
-        dirLightFolder.add(_this.dirLight, 'visible');
-        dirLightFolder.add(_this.dirLight.position, 'x', -20, 20, 0.1);
-        dirLightFolder.add(_this.dirLight.position, 'y', -20, 20, 0.1);
-        dirLightFolder.add(_this.dirLight.position, 'z', -20, 20, 0.1);
-        dirLightFolder.open();
-        dirLightFolder.open();
-
-        const shadowMapFolder = gui.addFolder('阴影');
-        shadowMapFolder.open();
-        shadowMapFolder
-          .add(_this.dirLight.shadow.mapSize, 'x', 0, 2048, 1)
-          .name('x');
-        shadowMapFolder
-          .add(_this.dirLight.shadow.mapSize, 'y', 0, 2048, 1)
-          .name('y');
-        shadowMapFolder
-          .add(_this.dirLight.shadow, 'radius', 0, 100, 0.1)
-          .name('r');
+        // 控制环境光是否可见
+        const ambientLightFolder = gui.addFolder('环境光');
+        ambientLightFolder.add(this.ambientLight, 'visible').name('可见');
+        ambientLightFolder.open();
 
         const boxFolder = gui.addFolder('box');
-        boxFolder.open();
         boxFolder.add(_this.box.position, 'x', -20, 20, 0.1).onChange(() => {
-          _this.dirHelper.update();
+          _this.rectLight.lookAt(_this.box.position);
         });
         boxFolder.add(_this.box.position, 'y', -20, 20, 0.1).onChange(() => {
-          _this.dirHelper.update();
+          _this.rectLight.lookAt(_this.box.position);
         });
         boxFolder.add(_this.box.position, 'z', -20, 20, 0.1).onChange(() => {
-          _this.dirHelper.update();
+          _this.rectLight.lookAt(_this.box.position);
         });
+        boxFolder.open();
+
+        const r = gui.addFolder('矩形面光源');
+        r.open();
+        r.add(_this.rectLight, 'visible');
+        r.add(_this.rectLight, 'intensity', 0, 20, 0.1);
+        r.addColor(_this.rectLight, 'color').onChange((val) => {
+          _this.rectLight.color = new THREE.Color(val.r, val.g, val.b);
+        });
+        r.add(_this.rectLight, 'width', 0, 10, 0.1);
+        r.add(_this.rectLight, 'height', 0, 10, 0.1);
+        r.add(_this.rectLight.position, 'x', -10, 10, 0.1);
+        r.add(_this.rectLight.position, 'y', -10, 10, 0.1);
+        r.add(_this.rectLight.position, 'z', -10, 10, 0.1);
+        r.add(_this.rectLight.rotation, 'x', -Math.PI, Math.PI, 0.01);
+        r.add(_this.rectLight.rotation, 'y', -Math.PI, Math.PI, 0.01);
+        r.add(_this.rectLight.rotation, 'z', -Math.PI, Math.PI, 0.01);
       },
       helpers() {
         // 创建辅助坐标系
@@ -231,7 +208,6 @@ const Page = () => {
         });
 
         renderer.shadowMap.enabled = true;
-
         // 设置渲染器屏幕像素比
         renderer.setPixelRatio(window.devicePixelRatio || 1);
 
