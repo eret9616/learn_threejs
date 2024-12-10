@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader';
 import * as dat from 'dat.gui';
+import { fog } from 'three/examples/jsm/nodes/Nodes.js';
 
 const Page = () => {
   useEffect(() => {
@@ -17,27 +18,24 @@ const Page = () => {
         this.width = width;
         this.height = height;
 
+        // 创建雾
+        const fog = new THREE.Fog(0xe0e0e0, 0, 20);
+
         // 创建3D场景对象
+        fog.name = 'fog';
         const scene = new THREE.Scene();
+        scene.fog = fog;
+        scene.background = new THREE.Color(0xe0e0e0);
         this.scene = scene;
       },
       createLights() {
         // 添加全局光照
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.95);
 
-        ambientLight.visible = false;
+        ambientLight.visible = true;
         this.ambientLight = ambientLight;
 
-        // 添加方向光
-        const dirLight = new THREE.DirectionalLight(0xffffaa, 0.95);
-
-        dirLight.position.set(0, 1, 2);
-        dirLight.castShadow = true;
-        const dirHelper = new THREE.DirectionalLightHelper(dirLight, 3);
-
-        this.dirHelper = dirHelper;
-        this.dirLight = dirLight;
-        this.scene.add(ambientLight, dirLight, dirHelper);
+        this.scene.add(ambientLight);
       },
       loadTextures() {
         // const img = new Image()
@@ -88,19 +86,43 @@ const Page = () => {
           console.log('There was an error loading ' + url);
         };
         const textureLoader = new THREE.TextureLoader(manager);
-
-        const floorTexture = textureLoader.load(
-          '/src/assets/textures/floor_tiles_06/floor_tiles_06_diff_2k.jpg'
+      },
+      createMeshes(mapcapTexture) {
+        const geometry = new THREE.TorusGeometry(
+          Math.random(), //[0,1)
+          Math.abs(Math.random() - 0.5), // [0-0.5)
+          32
         );
-
-        const wallTexture = textureLoader.load(
-          'src/assets/textures/large_sandstone_blocks/large_sandstone_blocks_diff_2k.jpg'
+        const mesh = new THREE.Mesh(
+          geometry,
+          new THREE.MeshMatcapMaterial({
+            color: 0xffffff,
+            matcap: mapcapTexture,
+          })
         );
+        mesh.position.x = (Math.random() - 0.5) * 50;
+        mesh.position.y = 1;
+        mesh.position.z = (Math.random() - 0.5) * 50;
+        mesh.rotation.x = Math.random() * Math.PI;
+        mesh.rotation.y = Math.random() * Math.PI;
+        mesh.rotation.z = Math.random() * Math.PI;
+        mesh.scale.x = Math.random() * 0.3 + 0.5;
+        mesh.scale.y = Math.random() * 0.3 + 0.5;
+        mesh.scale.z = Math.random() * 0.3 + 0.5;
 
-        this.floorTexture = floorTexture;
-        this.wallTexture = wallTexture;
+        this.scene.add(mesh);
       },
       createObjects() {
+        const textureLoader = new THREE.TextureLoader();
+        const mapcapTexture = textureLoader.load(
+          'src/assets/textures/matcaps/BA472D_CA6E67-256px.png'
+        );
+
+        for (let i = 0; i < 300; i++) {
+          this.createMeshes(mapcapTexture);
+        }
+
+        this.createMeshes();
         const box = new THREE.Mesh(
           new THREE.BoxGeometry(1, 1, 1),
           new THREE.MeshLambertMaterial({
@@ -118,32 +140,12 @@ const Page = () => {
           })
         );
 
-        const wall = new THREE.Mesh(
-          geometry,
-          new THREE.MeshLambertMaterial({
-            // color: 0xfafccf,
-            side: THREE.DoubleSide,
-          })
-        );
-
-        box.castShadow = true;
-        wall.position.z = -2;
-        floor.receiveShadow = true;
         floor.rotation.x = -Math.PI / 2;
         floor.position.y = -0.8;
         floor.position.z = -2;
 
-        const sky = new THREE.Mesh(
-          geometry,
-          new THREE.MeshLambertMaterial({
-            side: THREE.DoubleSide,
-          })
-        );
-        this.dirLight.target = box;
         this.box = box;
-        sky.position.y = 20;
-        sky.rotation.x = -Math.PI / 2;
-        this.scene.add(box, floor, sky, wall);
+        this.scene.add(box, floor);
       },
       createCamera() {
         // 创建第二个相机
@@ -166,56 +168,40 @@ const Page = () => {
         const gui = new dat.GUI();
         window.gui = gui;
 
+        // 控制环境光开启
         const ambientFolder = gui.addFolder('环境光');
-
-        ambientFolder
-          .add(_this.ambientLight, 'intensity', 0, 1, 0.1)
-          .name('环境光强度');
-        ambientFolder.add(_this.ambientLight, 'visible').name('环境光可见性');
-        ambientFolder
-          .addColor(
-            {
-              color: 0xffffff,
-            },
-            'color'
-          )
-          .onChange((color) => {
-            _this.ambientLight.color.set(color);
-          });
+        ambientFolder.add(this.ambientLight, 'visible').name('开启环境光');
         ambientFolder.open();
 
-        const dirLightFolder = gui.addFolder('方向光');
-        dirLightFolder.add(_this.dirLight, 'intensity', 0, 1, 0.1);
-        dirLightFolder.add(_this.dirLight, 'visible');
-        dirLightFolder.add(_this.dirLight.position, 'x', -20, 20, 0.1);
-        dirLightFolder.add(_this.dirLight.position, 'y', -20, 20, 0.1);
-        dirLightFolder.add(_this.dirLight.position, 'z', -20, 20, 0.1);
-        dirLightFolder.open();
-        dirLightFolder.open();
-
-        const shadowMapFolder = gui.addFolder('阴影');
-        shadowMapFolder.open();
-        shadowMapFolder
-          .add(_this.dirLight.shadow.mapSize, 'x', 0, 2048, 1)
-          .name('x');
-        shadowMapFolder
-          .add(_this.dirLight.shadow.mapSize, 'y', 0, 2048, 1)
-          .name('y');
-        shadowMapFolder
-          .add(_this.dirLight.shadow, 'radius', 0, 100, 0.1)
-          .name('r');
-
+        // 控制box的x坐标
         const boxFolder = gui.addFolder('box');
+        boxFolder.add(_this.box.material, 'fog').onChange((val) => {
+          const material = new THREE.MeshLambertMaterial({
+            color: 0x1890ff,
+          });
+          material.fog = val;
+          _this.box.material = material;
+        });
+        boxFolder.add(_this.box.position, 'x', -20, 20, 0.1).onChange(() => {});
+        // z
+        boxFolder.add(_this.box.position, 'z', -20, 20, 0.1).onChange(() => {});
         boxFolder.open();
-        boxFolder.add(_this.box.position, 'x', -20, 20, 0.1).onChange(() => {
-          _this.dirHelper.update();
-        });
-        boxFolder.add(_this.box.position, 'y', -20, 20, 0.1).onChange(() => {
-          _this.dirHelper.update();
-        });
-        boxFolder.add(_this.box.position, 'z', -20, 20, 0.1).onChange(() => {
-          _this.dirHelper.update();
-        });
+
+        const fogFolder = gui.addFolder('雾');
+        // 修改后
+        fogFolder
+          .addColor({ color: _this.scene.fog.color.getHex() }, 'color')
+          .onChange((val) => {
+            _this.scene.fog.color.set(val);
+            // background
+            _this.scene.background.set(val);
+          });
+
+        //   near
+        fogFolder.add(_this.scene.fog, 'near', 0, 100, 0.1).onChange(() => {});
+        //   far
+        fogFolder.add(_this.scene.fog, 'far', 10, 100, 0.1);
+        fogFolder.open();
       },
       helpers() {
         // 创建辅助坐标系
