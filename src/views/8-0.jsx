@@ -26,7 +26,31 @@ const Page = () => {
         const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
         this.scene.add(ambientLight, directionalLight);
       },
-      createObjects() {},
+      createObjects() {
+        const map = new THREE.TextureLoader().load(
+          'src/assets/textures/raindrop.png'
+        );
+        map.colorSpace = THREE.SRGBColorSpace;
+
+        for (let x = -10; x < 10; x++) {
+          for (let y = -10; y < 10; y++) {
+            const material = new THREE.SpriteMaterial({
+              color: Math.random() * 0xffffff,
+              opacity: Math.random(),
+              rotation: Math.random() * Math.PI * 2,
+              map,
+            });
+            const sprite = new THREE.Sprite(material);
+            sprite.position.set(
+              x * Math.random(),
+              y * Math.random(),
+              Math.random() * 10
+            );
+            this.scene.add(sprite);
+          }
+        }
+        console.log(THREE.REVISION);
+      },
       createCamera() {
         const pCamera = new THREE.PerspectiveCamera(
           75,
