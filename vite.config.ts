@@ -1,6 +1,10 @@
 import react from '@vitejs/plugin-react';
-import { defineConfig } from "vite";
+import { defineConfig } from 'vite';
 
-export default defineConfig({
-  plugins: [react()],
-});
+export default defineConfig(async () => {
+  const glsl = (await import('vite-plugin-glsl')).default;
+  
+  return {
+    plugins: [react(), glsl()],
+  }
+}); 
