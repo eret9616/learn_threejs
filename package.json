@@ -19,7 +19,7 @@
     "@types/three": "^0.150.2",
     "cannon": "^0.6.2",
     "dat.gui": "^0.7.9",
-    "gsap": "^3.11.5",
+    "gsap": "^3.12.7",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.10.0",
