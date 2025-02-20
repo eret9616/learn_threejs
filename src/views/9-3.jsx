@@ -255,68 +255,90 @@ const Page = () => {
       flag: false, // 是否碰撞
       speedX: 0.1, // 横向运动的距离
       tick() {
-        // 网格中心
+        // 获取盒子的中心点坐标，clone()是为了创建一个新的向量副本，避免直接修改原始位置
         const centerCoord = this.box.position.clone();
-        // 顶点坐标
+
+        // geometry.attributes.position 包含了这个几何体所有顶点的坐标信息
+        // 一个立方体有8个顶点，每个顶点有x,y,z三个坐标值
         const { position } = this.box.geometry.attributes;
-        // 顶点向量
+
+        // 创建一个数组来存储所有顶点
         const vertices = [];
+        // position.count 表示顶点的数量
         for (let i = 0; i < position.count; i++) {
+          // 对于每个顶点，从geometry中获取它的x,y,z坐标
+          // position.getX(i)获取第i个顶点的x坐标，以此类推
+          // 创建一个新的三维向量来表示这个顶点
           vertices.push(
             new THREE.Vector3(
-              position.getX(i),
-              position.getY(i),
-              position.getZ(i)
+              position.getX(i), // 获取顶点的x坐标
+              position.getY(i), // 获取顶点的y坐标
+              position.getZ(i) // 获取顶点的z坐标
             )
           );
         }
 
+        // 遍历所有顶点，为每个顶点创建一条射线
         for (let i = 0; i < vertices.length; i++) {
-          // 获取网格在应用变换后的世界坐标
+          // applyMatrix4将顶点坐标从局部坐标系转换到世界坐标系
+          // matrixWorld是物体的世界变换矩阵，包含了位置、旋转、缩放等信息
           const worldCoord = vertices[i]
             .clone()
             .applyMatrix4(this.box.matrixWorld);
 
-          // 获取由中心指向顶点的向量
+          // 计算从盒子中心到当前顶点的方向向量
+          // sub()方法进行向量减法：顶点坐标 - 中心坐标 = 方向向量
           const dir = worldCoord.clone().sub(centerCoord);
 
-          // 发射射线
+          // 创建一个射线投射器
+          // 参数1：射线起点（盒子中心）
+          // 参数2：射线方向（归一化后的方向向量）
           const raycaster = new THREE.Raycaster(
             centerCoord,
-            dir.clone().normalize()
+            dir.clone().normalize() // normalize()将向量长度归一化为1
           );
 
+          // 检测射线是否与蓝色立方体相交
           const intersects = raycaster.intersectObjects([this.cube], true);
 
+          // 如果检测到相交
           if (intersects.length) {
             console.log(intersects);
             console.log('相交');
+            // 打印相交点距离射线起点的距离，以及射线方向向量的长度
             console.log(intersects[0].distance, dir.length());
             const cube = intersects[0].object;
 
+            // 如果相交点距离小于等于方向向量长度，说明发生了真实碰撞
             if (intersects[0].distance <= dir.length()) {
-              cube.material.opacity = 0.5;
-              cube.material.transparent = true;
-              this.flag = true;
+              cube.material.opacity = 0.5; // 设置立方体半透明
+              cube.material.transparent = true; // 启用透明度
+              this.flag = true; // 设置碰撞标志
             } else {
-              cube.material.opacity = 1;
+              cube.material.opacity = 1; // 恢复完全不透明
             }
+            // 更新材质
             cube.material.needsUpdate = true;
           }
         }
 
+        // 根据碰撞标志控制盒子运动
         if (!this.flag) {
-          this.box.position.x += this.speedX;
+          this.box.position.x += this.speedX; // 无碰撞时向右移动
         } else {
-          this.box.position.x -= this.speedX;
+          this.box.position.x -= this.speedX; // 有碰撞时向左移动
         }
 
+        // 当盒子移动到左边界时
         if (this.box.position.x <= -5) {
-          this.flag = false;
+          this.flag = false; // 重置碰撞标志
         }
 
+        // 更新轨道控制器
         this.orbitControls.update();
+        // 渲染场景
         this.renderer.render(this.scene, this.camera);
+        // 请求下一帧动画
         window.requestAnimationFrame(() => this.tick());
       },
       fitView() {
