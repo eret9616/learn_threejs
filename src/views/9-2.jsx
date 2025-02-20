@@ -136,11 +136,13 @@ const Page = () => {
         ground.rotation.x = -Math.PI / 2;
         ground.position.y = -1;
 
-        // gsap.to(box.position, {
-        //   duration: 2,
-        //   repeat: -1,
-        //   x: 4,
-        // });
+        gsap.to(box.position, {
+          duration: 2,
+          repeat: -1,
+          yoyo: true,
+          ease: 'none',
+          x: 4,
+        });
 
         this.scene.add(box, ground);
       },
@@ -221,6 +223,13 @@ const Page = () => {
 
         this.box.material.needsUpdate = true;
 
+        // 更新 currentIntersect
+        if (objects.length) {
+          this.currentIntersect = objects[0];
+        } else {
+          this.currentIntersect = null;
+        }
+
         // 只有当真正相交时才设置透明度
         const target = objects[0]?.object;
         if (target) {
@@ -259,11 +268,31 @@ const Page = () => {
           console.log(e.clientY / window.innerHeight);
         });
 
-        // window.addEventListener('pointerdown', (e) => {
-        //   this.pointer.x = (e.clientX / window.innerWidth) * 2 - 1; // 0-2
-        //   this.pointer.y = -(e.clientY / window.innerHeight) * 2 + 1; // -1 1
-        //   console.log(e.clientY / window.innerHeight);
-        // });
+        window.addEventListener('pointerdown', (e) => {
+          //   this.pointer.x = (e.clientX / window.innerWidth) * 2 - 1; // 0-2
+          //   this.pointer.y = -(e.clientY / window.innerHeight) * 2 + 1; // -1 1
+          //   console.log(e.clientY / window.innerHeight);
+
+          if (this.currentIntersect) {
+            // console.log('currentIntersect:', this.currentIntersect);
+            const box = this.currentIntersect.object;
+
+            const boxCopy = new THREE.Mesh(
+              new THREE.BoxGeometry(4, 4, 4),
+              new THREE.MeshBasicMaterial({
+                map: box.material.map,
+              })
+            );
+
+            boxCopy.position.copy(box.position);
+
+            this.scene.add(boxCopy);
+            gsap.to(boxCopy.position, {
+              duration: 1,
+              y: 1,
+            });
+          }
+        });
       },
     };
     $.init();
