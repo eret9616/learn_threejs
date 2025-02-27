@@ -11,9 +11,14 @@ import gsap from 'gsap';
 
 const Page = () => {
   useEffect(() => {
+    let sound;
     const move = {
       up: false,
       down: false,
+      waiting: false,
+      lock: false,
+      touched: false,
+      stoped: false,
     };
     const $ = {
       createScene() {
@@ -131,7 +136,7 @@ const Page = () => {
       loadAudio() {
         const listener = new THREE.AudioListener();
         this.camera.add(listener);
-        const sound = new THREE.Audio(listener);
+        sound = new THREE.Audio(listener);
         const audioLoader = new THREE.AudioLoader();
         audioLoader.load('public/models/sounds/ding.m4a', (buffer) => {
           sound.setBuffer(buffer);
@@ -287,17 +292,66 @@ const Page = () => {
       speedX: 0.1, // 横向运动的距离
       clock: new THREE.Clock(),
       tick() {
+        const _this = this;
         const timeDelta = this.clock.getDelta();
         const distance = timeDelta * 10;
-        if (move.up) {
-          this.sphere.position.z -= distance;
-          this.dirLight.position.z -= distance;
-          this.pointerLockControls.moveForward(distance);
-        }
-        if (move.down) {
-          this.sphere.position.z += distance;
-          this.dirLight.position.z += distance;
-          this.pointerLockControls.moveForward(-distance);
+
+        if (move.waiting) {
+          if (!move.lock) {
+            move.lock = true;
+            // 如果移动到了桥面
+            const start = gsap.to(_this.camera.position, {
+              duration: 1.5,
+              x: 120,
+              y: -15,
+              z: -60,
+              onUpdate() {
+                _this.camera.lookAt(new THREE.Vector3(0, -20, -60));
+              },
+              onReverseComplete() {
+                move.waiting = false;
+                move.stoped = true;
+              },
+            });
+
+            const tl = gsap.timeline({ delay: 1.5 });
+
+            _this.group.children.forEach((mesh, index) => {
+              tl.to(mesh.position, {
+                duration: 1,
+                delay: -0.7,
+                y: -5,
+                keyframes: {
+                  '90%': {
+                    onComplete() {
+                      //
+                      sound.play();
+                    },
+                  },
+                },
+                onComplete() {
+                  if (index === _this.group.children.length - 1) {
+                    // 执行完所有动画
+                    // 倒转动画
+                    start.reverse();
+                  }
+                },
+              });
+            });
+          }
+        } else {
+          if (move.up) {
+            this.sphere.position.z -= distance;
+            this.dirLight.position.z -= distance;
+            this.pointerLockControls.moveForward(distance);
+            if (this.sphere.position.z <= -6 && !move.stoped) {
+              move.waiting = true;
+            }
+          } else if (move.down) {
+            this.sphere.position.z += distance;
+            this.dirLight.position.z += distance;
+            this.pointerLockControls.moveForward(-distance);
+          }
         }
 
         this.dirLightHelper.update();
@@ -329,12 +383,16 @@ const Page = () => {
         this.datGui();
         const starter = document.getElementById('instructions');
         starter.addEventListener('click', () => {
+          move.touched = true;
           starter.style.display = 'none';
           this.loadAudio();
         });
 
         // 键盘按下事件
         document.onkeydown = (e) => {
+          if (!move.touched) {
+            return;
+          }
           switch (e.code) {
             case 'ArrowUp':
               // 前进
@@ -349,6 +407,9 @@ const Page = () => {
 
         // 键盘松开事件
         document.onkeyup = (e) => {
+          if (!move.touched) {
+            return;
+          }
           switch (e.code) {
             case 'ArrowUp':
               move.up = false;
