@@ -34,7 +34,7 @@ const Page = () => {
         const ambientLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
         
         // 平行光 - 调整位置和强度
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 10);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 2);
         directionalLight.position.set(5, 20, 5); // 调整光源位置到更高处
         directionalLight.castShadow = true; // 启用阴影
 
@@ -51,19 +51,34 @@ const Page = () => {
         
         gltfLoader.setDRACOLoader(dracoLoader)
         dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/')
-        gltfLoader.load('public/models/Fox/glTF-Binary/Fox.glb',
+        
+        let modelLoaded = false
+        
+        gltfLoader.load('public/models/2CylinderEngine/2CylinderEngine_blender.gltf',
           (gltf)=>{
             console.log('loaded')
             console.log(gltf)
             gltf.scene.scale.set(0.05,0.05,0.05)
+            gltf.scene.rotation.y =  Math.PI
             // gltf.scene.position.y = -10
 
             gltf.scene.traverse(obj=>{
-              console.log(obj.name)
+              // console.log(obj)
+              if(obj.name === 'body_1'){
+                obj.material.transparent = true
+                obj.material.opacity = 0.5
+              }else if (obj.name === 'body_21' || obj.name === 'body_23'){
+                obj.material.color = new THREE.Color(0xf39c12)
+              }else if(obj.name === 'body_2001' || obj.name === 'body_2002'){
+                obj.material.color = new THREE.Color(0x8e44ad)
+                obj.material.transparent = true
+                // obj.material.opacity = 0.3
+              }
               // if(obj.name === '')
             })
             
             this.scene.add(gltf.scene)
+            modelLoaded = true
           },
           xhr=>{
             // console.log(xhr)
@@ -72,6 +87,42 @@ const Page = () => {
             console.log(error)
           }
         )
+
+
+        window.addEventListener('wheel',e=>{
+          e.stopPropagation()
+          e.preventDefault()
+
+
+
+          if(modelLoaded){
+             let body_2001,body_3001,body_4001
+             let body_2002,body_3002,body_4002
+
+             _this.scene.traverse(obj=>{
+              if(obj.name === 'body_2001'){
+                body_2001 = obj
+             } else if(obj.name === 'body_3001'){
+                body_3001 = obj
+             } else if(obj.name === 'body_4001'){
+                body_4001 = obj
+             } else if(obj.name === 'body_2002'){
+                body_2002 = obj
+             } else if(obj.name === 'body_3002'){
+                body_3002 = obj
+             } else if(obj.name === 'body_4002'){
+                body_4002 = obj
+             }})
+      
+            
+            body_2001.position.x += e.deltaY/4
+            body_3001.position.x += e.deltaY/2
+            body_4001.position.x += e.deltaY
+            body_2002.position.y += e.deltaY/4 
+            body_3002.position.y += e.deltaY/2 
+            body_4002.position.y += e.deltaY
+          }
+        },{passive:false})
       },
       createCamera() {
         const pCamera = new THREE.PerspectiveCamera(
@@ -81,7 +132,7 @@ const Page = () => {
           1000
         );
 
-        pCamera.position.set(0, 1, 2); // x,y,z
+        pCamera.position.set(0, 10, 18); // x,y,z
         pCamera.lookAt(this.scene.position);
         this.scene.add(pCamera);
         this.camera = pCamera;
@@ -115,6 +166,7 @@ const Page = () => {
         // 创建轨道控制器
         const orbitControls = new OrbitControls(this.camera, this.canvas);
         orbitControls.enableDamping = true;
+        orbitControls.enableZoom = false
         this.orbitControls = orbitControls;
         console.log(orbitControls);
 
@@ -175,7 +227,6 @@ const Page = () => {
 
   return (
     <>
-      start your project
       <canvas id="c" />;
     </>
   );
