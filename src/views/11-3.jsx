@@ -10,6 +10,8 @@ import { Wireframe } from 'three/examples/jsm/lines/Wireframe.js';
 import { HeartCurve } from 'three/examples/jsm/curves/CurveExtras.js';
 import{GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
 import {DRACOLoader} from 'three/examples/jsm/loaders/DRACOLoader.js'
+import{GUI} from 'dat.gui'
+
 
 const Page = () => {
   useEffect(() => {
@@ -44,6 +46,31 @@ const Page = () => {
         const directionalLightHelper = new THREE.DirectionalLightHelper(directionalLight, 2);
         this.scene.add(directionalLightHelper);
       },
+      mixer:null,
+      swimingWeight:0,
+      circlingWeight:0,
+      biteWeight:0,
+      prepareCrossFade(startAction,endAction,duration){
+        if(startAction === ''){
+          endAction.fadeIn(duration)
+          endAction.play()
+        }else{
+          const onLoopFinished = (event)=>{
+            console.log(event)
+            if(event.action._clip.name === startAction._clip.name){
+              endAction.setEffectiveTimeScale(1)
+              endAction.setEffectiveWeight(1)
+              endAction.time = 0
+
+              // 是否使用扭曲进入淡入淡出交叉动画
+              startAction.crossFadeTo(endAction,dudation,true)
+              endAction.play()
+              this.mixer.removeEventListener('loop',onLoopFinished)
+            }
+          }
+          this.mixer.addEventListener('loop',onLoopFinished)
+        }
+      },
       createObjects() {
         const _this = this
         const gltfLoader = new GLTFLoader()
@@ -58,6 +85,13 @@ const Page = () => {
           (gltf)=>{
             console.log('loaded')
             console.log(gltf)
+
+            const mixer = this.mixer = new THREE.AnimationMixer(gltf.scene)
+            const swimingAction = mixer.clipAction(gltf.animations[0])
+            const circlingAction = mixer.clipAction(gltf.animations[1])
+            const biteAction = mixer.clipAction(gltf.animations[2])
+            // swimingAction.play()
+
             // gltf.scene.scale.set(0.05,0.05,0.05)
             gltf.scene.rotation.y =  Math.PI
             // gltf.scene.position.y = -10
@@ -108,6 +142,56 @@ const Page = () => {
             
             this.scene.add(gltf.scene)
             modelLoaded = true
+
+            const gui = new GUI()
+            const params = {
+              animation:'',
+              timeScale:1,
+              pause(){
+                swimingAction.paused = true
+                circlingAction.paused = true
+                biteAction.paused = true 
+              },
+              '静止=>游动'(){
+                params.animation='swiming';
+                _this.prepareCrossFade('',swimingAction,2)
+              },
+              '游动=>撕咬'(){
+                params.animation='bite'
+                _this.prepareCrossFade('',biteAction,1)
+
+              }
+            }
+            gui.add(params,'animation',{
+              无:'',
+              游动:'swiming',
+              绕圈:'circling',
+              撕咬:'bite'
+            }).name('切换动画').onChange(val=>{
+              swimingAction.stop()
+              circlingAction.stop()
+              biteAction.stop() 
+
+              switch(val){
+                case '':
+                break;
+                case 'swiming':
+                swimingAction.play()
+                break;
+                case 'circling':
+                circlingAction.play()
+                break;
+                case 'bite':
+                  biteAction.play()
+                  break;
+              }
+            })
+            gui.add(params,'pause')
+            gui.add(params,'timeScale',0,4,0.01).name('动画播放速度').onChange(val=>{
+              _this.mixer.timeScale = val;
+            })
+            gui.add(params,'静止=>游动');
+            gui.add(params,'游动=>撕咬')
           },
           xhr=>{
             // console.log(xhr)
@@ -216,7 +300,11 @@ const Page = () => {
         });
       },
       count: 0, //当前点的index
+      clock:new THREE.Clock(),
       tick() {
+        const deltaTime = this.clock.getDelta()
+        // update mixer
+        this.mixer&& this.mixer.update(deltaTime)
         this.orbitControls.update();
 
         this.renderer.render(this.scene, this.camera);
