@@ -46,132 +46,157 @@ const Page = () => {
         const directionalLightHelper = new THREE.DirectionalLightHelper(directionalLight, 2);
         this.scene.add(directionalLightHelper);
       },
-      mixer:null,
-      swimingWeight:0,
-      circlingWeight:0,
-      biteWeight:0,
+      mixer:null,  // 动画混合器，用于控制和管理所有动画
+      swimingWeight:0,  // 游泳动画的权重
+      circlingWeight:0,  // 绕圈动画的权重
+      biteWeight:0,  // 撕咬动画的权重
+
+      /**
+       * 准备动画交叉淡入淡出效果
+       * @param {string} startAction - 当前正在播放的动画名称
+       * @param {THREE.AnimationAction} endAction - 要切换到的新动画动作
+       * @param {number} duration - 过渡动画的持续时间（秒）
+       */
       prepareCrossFade(startAction,endAction,duration){
+        // 如果没有起始动画（比如从静止状态开始）
         if(startAction === ''){
+          // 直接淡入新动画
           endAction.fadeIn(duration)
           endAction.play()
         }else{
+          // 如果有起始动画，等待当前动画完成一轮后开始过渡
           const onLoopFinished = (event)=>{
-            console.log(event)
+            // 检查是否是当前动画完成了一轮
             if(event.action._clip.name === startAction._clip.name){
-              endAction.setEffectiveTimeScale(1)
-              endAction.setEffectiveWeight(1)
-              endAction.time = 0
+              // 设置新动画的参数
+              endAction.setEffectiveTimeScale(1)  // 设置动画播放速度
+              endAction.setEffectiveWeight(1)     // 设置动画权重为1（完全显示）
+              endAction.time = 0                  // 重置动画时间到开始
 
-              // 是否使用扭曲进入淡入淡出交叉动画
-              startAction.crossFadeTo(endAction,dudation,true)
+              // 使用扭曲效果进行动画交叉淡入淡出
+              // true参数表示使用扭曲效果，使过渡更自然
+              startAction.crossFadeTo(endAction,duration,true)
               endAction.play()
+              // 移除事件监听器，避免重复触发
               this.mixer.removeEventListener('loop',onLoopFinished)
             }
           }
+          // 添加动画循环完成事件监听
           this.mixer.addEventListener('loop',onLoopFinished)
         }
       },
       createObjects() {
         const _this = this
+        // 创建GLTF加载器，用于加载3D模型
         const gltfLoader = new GLTFLoader()
+        // 创建DRACO加载器，用于解码压缩的模型数据
         const dracoLoader = new DRACOLoader('/src/assets/draco')
         
+        // 设置GLTF加载器使用DRACO加载器
         gltfLoader.setDRACOLoader(dracoLoader)
         dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/')
         
         let modelLoaded = false
         
+        // 加载鲨鱼模型
         gltfLoader.load('public/models/shark_animation/scene.gltf',
           (gltf)=>{
             console.log('loaded')
             console.log(gltf)
 
+            // 创建动画混合器，用于控制所有动画
             const mixer = this.mixer = new THREE.AnimationMixer(gltf.scene)
-            const swimingAction = mixer.clipAction(gltf.animations[0])
-            const circlingAction = mixer.clipAction(gltf.animations[1])
-            const biteAction = mixer.clipAction(gltf.animations[2])
-            // swimingAction.play()
+            
+            // 从模型文件中提取三个动画并创建动画动作
+            const swimingAction = mixer.clipAction(gltf.animations[0])  // 游泳动画
+            const circlingAction = mixer.clipAction(gltf.animations[1]) // 绕圈动画
+            const biteAction = mixer.clipAction(gltf.animations[2])     // 撕咬动画
 
-            // gltf.scene.scale.set(0.05,0.05,0.05)
+            // 调整模型的方向
             gltf.scene.rotation.y =  Math.PI
-            // gltf.scene.position.y = -10
 
+            // 遍历模型中的所有网格对象
             gltf.scene.traverse(obj=>{
               if(obj.isMesh && obj.material){
                 const {gltfExtensions}=obj.material.userData
 
                 if(gltfExtensions){
                   const pbr = gltfExtensions.KHR_materials_pbrSpecularGlossiness
-                  debugger
                   if(pbr){
-                    console.log(pbr)
+                    // 加载材质贴图
                     const textureLoader = new THREE.TextureLoader()
+                    // 加载漫反射贴图
                     const map  = new THREE.TextureLoader().load('public/models/shark_animation/textures/material_0_diffuse.png')
+                    // 加载镜面光泽贴图
                     const specularGlossinessTexture = textureLoader.load('public/models/shark_animation/textures/material_0_specularGlossiness.png')
                     
+                    // 设置贴图参数
                     map.flipY = false
                     map.colorSpace = THREE.SRGPColorSpace
                     specularGlossinessTexture.flipY = false
                     specularGlossinessTexture.colorSpace = THREE.SRGPColorSpace
 
+                    // 创建物理材质
                     const material = new THREE.MeshPhysicalMaterial({
-                      map,
+                      map,  // 漫反射贴图
                       color: new THREE.Color(
                         pbr.diffuseFactor[0],
                         pbr.diffuseFactor[1],
                         pbr.diffuseFactor[2]
                       ),
-                      sheen:pbr.glossinessFactor,
-                      specularIntensityMap:specularGlossinessTexture,
+                      sheen:pbr.glossinessFactor,  // 光泽度
+                      specularIntensityMap:specularGlossinessTexture,  // 镜面强度贴图
                       specularColor: new THREE.Color(
                         pbr.specularFactor[0],
                         pbr.specularFactor[1],
                         pbr.specularFactor[2]
                       ),
-                      roughness:0.2
+                      roughness:0.2  // 粗糙度
                     })
                     obj.material = material
                     this.dirLight.target = obj
-                    // this.directionalLight.target =
                   }
                 }
-                console.log(obj.material)
               }
-              // if(obj.name === '')
             })
             
             this.scene.add(gltf.scene)
             modelLoaded = true
 
+            // 创建GUI控制面板
             const gui = new GUI()
             const params = {
-              animation:'',
-              timeScale:1,
-              pause(){
+              animation:'',  // 当前动画状态
+              timeScale:1,   // 动画播放速度
+              pause(){       // 暂停所有动画
                 swimingAction.paused = true
                 circlingAction.paused = true
                 biteAction.paused = true 
               },
+              // 从静止状态切换到游泳状态
               '静止=>游动'(){
-                params.animation='swiming';
+                params.animation='swiming'; // 确保 GUI 控制面板显示正确的当前动
                 _this.prepareCrossFade('',swimingAction,2)
               },
+              // 从游泳状态切换到撕咬状态
               '游动=>撕咬'(){
-                params.animation='bite'
+                params.animation='bite' // 确保 GUI 控制面板显示正确的当前动
                 _this.prepareCrossFade('',biteAction,1)
-
               }
             }
+            // 添加动画选择下拉菜单
             gui.add(params,'animation',{
               无:'',
               游动:'swiming',
               绕圈:'circling',
               撕咬:'bite'
             }).name('切换动画').onChange(val=>{
+              // 停止所有动画
               swimingAction.stop()
               circlingAction.stop()
               biteAction.stop() 
 
+              // 根据选择播放对应动画
               switch(val){
                 case '':
                 break;
@@ -186,56 +211,23 @@ const Page = () => {
                   break;
               }
             })
+            // 添加暂停按钮
             gui.add(params,'pause')
+            // 添加动画速度控制滑块
             gui.add(params,'timeScale',0,4,0.01).name('动画播放速度').onChange(val=>{
               _this.mixer.timeScale = val;
             })
+            // 添加动画过渡按钮
             gui.add(params,'静止=>游动');
             gui.add(params,'游动=>撕咬')
           },
           xhr=>{
-            // console.log(xhr)
+            // 加载进度回调
           },
           error=>{
             console.log(error)
           }
         )
-
-
-        // window.addEventListener('wheel',e=>{
-        //   e.stopPropagation()
-        //   e.preventDefault()
-
-
-
-        //   if(modelLoaded){
-        //      let body_2001,body_3001,body_4001
-        //      let body_2002,body_3002,body_4002
-
-        //      _this.scene.traverse(obj=>{
-        //       if(obj.name === 'body_2001'){
-        //         body_2001 = obj
-        //      } else if(obj.name === 'body_3001'){
-        //         body_3001 = obj
-        //      } else if(obj.name === 'body_4001'){
-        //         body_4001 = obj
-        //      } else if(obj.name === 'body_2002'){
-        //         body_2002 = obj
-        //      } else if(obj.name === 'body_3002'){
-        //         body_3002 = obj
-        //      } else if(obj.name === 'body_4002'){
-        //         body_4002 = obj
-        //      }})
-      
-            
-        //     body_2001.position.x += e.deltaY/4
-        //     body_3001.position.x += e.deltaY/2
-        //     body_4001.position.x += e.deltaY
-        //     body_2002.position.y += e.deltaY/4 
-        //     body_3002.position.y += e.deltaY/2 
-        //     body_4002.position.y += e.deltaY
-        //   }
-        // },{passive:false})
       },
       createCamera() {
         const pCamera = new THREE.PerspectiveCamera(
